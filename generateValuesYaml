@@ -1,0 +1,55 @@
+#!/bin/bash
+
+main() {
+  set -e
+  set -o pipefail
+
+  declare SA_JSON=$(cat spinnaker-sa.json)
+  declare PROJECT=$(gcloud info --format='value(config.project)')
+  declare BUCKET=$PROJECT-spinnaker-config
+  declare GITHUB_TOKEN=$(cat ~/.netrc | awk '{print$NF}' | base64)
+
+  cat > values.yaml <<EOF
+  gcs:
+    enabled: true
+    bucket: $BUCKET
+    project: $PROJECT
+    jsonKey: '$SA_JSON'
+  dockerRegistries:
+  - name: gcr
+    address: https://gcr.io
+    username: _json_key
+    password: '$SA_JSON'
+    email: 1234@5678.com
+  # Disable minio as the default storage backend
+  minio:
+    enabled: false
+  # Configure Spinnaker to enable GCP services
+  halyard:
+    spinnakerVersion: 1.20.0
+    image:
+      tag: 1.35.3
+    additionalSecrets:
+      create: true
+      data:
+        github_token.txt: $GITHUB_TOKEN
+    additionalScripts:
+      create: true
+      data:
+        enable_gcs_artifacts.sh: |-
+          \$HAL_COMMAND config artifact gcs account add gcs-$PROJECT --json-path /opt/gcs/key.json
+          \$HAL_COMMAND config artifact gcs enable
+        enable_canary_feature.sh: |-
+          \$HAL_COMMAND config canary enable
+          \$HAL_COMMAND config canary google enable
+          \$HAL_COMMAND config canary google account add my-google-account --project $PROJECT --json-path /opt/gcs/key.json --bucket $BUCKET
+          \$HAL_COMMAND config canary google edit --gcs-enabled true --stackdriver-enabled true
+          \$HAL_COMMAND config canary edit --default-metrics-store stackdriver
+        enable_github_artifacts.sh: |-
+          \$HAL_COMMAND config artifact github enable
+          \$HAL_COMMAND config artifact github account add my-github-artifact-account --token-file /opt/halyard/additionalSecrets/github_token.txt
+EOF
+
+}
+
+main "$@"
