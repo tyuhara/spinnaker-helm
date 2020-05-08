@@ -20,11 +20,12 @@ Then `values.yaml` is generated under the current directory.
 After generating `values.yaml`, install or upgrade Spinnaker with Helm.
 The chart version, which specified with `--version option` is depend on Spinnaker and Halyard version. Therefore, it may not work well due to above reason.
 In this case, find the issue and try to specify another version. it should be fine.
+We can see the Chart version from [here](https://github.com/helm/charts/blob/master/stable/spinnaker/Chart.yaml#L4).
 
 ```console
 helm install -n cd stable/spinnaker -f values.yaml --timeout 600 --namespace=spinnaker --version 2.0.0-rc3 --wait
 ```
 
 ```console
-helm install -n cd stable/spinnaker -f spinnaker-config2.yaml --timeout 600 --namespace=spinnaker --version 2.0.0-rc3 --wait
+helm install -n cd stable/spinnaker -f values.yaml --timeout 600 --namespace=spinnaker --version 2.0.0-rc3 --wait
  ```
